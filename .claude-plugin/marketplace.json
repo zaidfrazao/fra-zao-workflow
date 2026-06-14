@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "fra-zao-workflow",
+  "description": "The /fra (project setup) and /zao (task development) Claude Code workflow, packaged as installable plugins.",
+  "owner": {
+    "name": "Zaid Frazao"
+  },
+  "plugins": [
+    {
+      "name": "fra",
+      "source": "./plugins/fra",
+      "description": "Project setup commands: scaffold, PRD / brand / testing docs, Lakar project structure (/fra:*).",
+      "category": "workflow"
+    },
+    {
+      "name": "zao",
+      "source": "./plugins/zao",
+      "description": "Task development workflow: branch + PR lifecycle driven by Lakar tasks (/zao:*).",
+      "category": "workflow"
+    }
+  ]
+}

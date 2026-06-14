@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "fra",
+  "description": "Project setup workflow: scaffold a repo, define PRD / brand / testing docs, and populate a Lakar project structure. Provides the /fra:* commands.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Zaid Frazao"
+  },
+  "keywords": [
+    "workflow",
+    "project-setup",
+    "lakar",
+    "prd",
+    "scaffolding"
+  ]
+}

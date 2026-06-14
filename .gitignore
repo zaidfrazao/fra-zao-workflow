@@ -1,0 +1,9 @@
+# Secrets — never commit real keys
+.env
+
+# Windows/WSL download cruft
+*:Zone.Identifier
+
+# OS / editor
+.DS_Store
+*.swp

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "zao",
+  "description": "Task development workflow: begin/implement/test/submit/finish a Lakar task on a branch with PR review, plus fix/adjust/pause/resume helpers. Provides the /zao:* commands.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Zaid Frazao"
+  },
+  "keywords": [
+    "workflow",
+    "development",
+    "lakar",
+    "git",
+    "pull-request",
+    "tasks"
+  ]
+}
