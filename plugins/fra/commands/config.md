@@ -238,7 +238,7 @@ Created `.claude/project.yaml` with:
 
 **Review and customize:**
 - Build commands in `build.commands.*`
-- Lakar statuses in `lakar.statuses.*`
+- PM provider & statuses in `project_management.*`
 - Team settings in `team.*`
 
 The `/zao:` commands will now use these settings.
