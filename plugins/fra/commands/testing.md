@@ -360,7 +360,7 @@ Commands configured from `.claude/project.yaml`:
 
 The full document is saved at `docs/TESTING_STRATEGY.md`
 
-**Next step:** Create your Lakar project structure with `/fra:lakar`
+**Next step:** Create your project-management structure with `/fra:setup-pm`
 
 ---
 
@@ -381,7 +381,7 @@ This is all automatic - bugs will be caught before they reach users.
 
 The full plan is saved at `docs/TESTING_STRATEGY.md`
 
-**Next step:** Type `/fra:lakar` to create your task list in Lakar.
+**Next step:** Type `/fra:setup-pm` to create your project-management structure.
 
 ---
 

@@ -1,9 +1,30 @@
 ---
 description: Save your progress and pause the current task to continue later
-allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, Bash, AskUserQuestion
+allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, Bash, AskUserQuestion, mcp__notetask__get_task, mcp__notetask__update_task, mcp__notetask__create_comment, mcp__notetask__get_current_user
 ---
 
 Pause the current task and save progress for later.
+
+### Project management provider
+
+This command supports two PM backends. Resolve which from `.claude/project.yaml`:
+- If a `project_management:` block exists, use `project_management.provider` (assume `lakar` if
+  that key is absent).
+- Else if a legacy `lakar:` block exists, the provider is `lakar` (statuses from
+  `lakar.statuses.*`, client from `team.lakar_client`).
+- Else default to `lakar`.
+
+Status **values** come from config (`project_management.statuses.*`, or legacy
+`lakar.statuses.*`). Wherever a step below names an `mcp__lakar__*` tool, use the resolved
+provider's equivalent:
+
+| Operation | Lakar (`provider: lakar`) | Note&Task (`provider: notetask`) |
+|---|---|---|
+| Fetch task by code | `mcp__lakar__get_task { id: CODE }` | `mcp__notetask__get_task { code: CODE }` |
+| Set task status | `mcp__lakar__update_task { id: CODE, status: <value> }` | `mcp__notetask__update_task { code: CODE, phase: <value> }` |
+| List tasks by status | `mcp__lakar__list_tasks { status: <value> }` | `mcp__notetask__list_tasks { phase: <value> }` |
+| Add comment | `mcp__lakar__create_comment { task_id: CODE, content }` — Lakar also needs `user_id` from `mcp__lakar__get_current_user` | `mcp__notetask__create_comment { code: CODE, content }` — no `user_id` |
+| List comments | `mcp__lakar__list_task_comments { task_id: CODE }` | `mcp__notetask__list_task_comments { code: CODE }` |
 
 ## Relevant MCP Tools
 - **Lakar**: Update task status, add pause notes documenting progress
@@ -93,7 +114,7 @@ Pause the current task and save progress for later.
 
 ## Important
 
-- **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_
+- **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_ This applies to Lakar only — Note&Task resolves the author from the API key, so skip get_current_user / user_id when provider is notetask.
 - Always commit and push before pausing so work isn't lost
 - The pause notes should be detailed enough that anyone (including future you) can understand where things stand
 - Don't switch branches automatically - let the user decide what to do next

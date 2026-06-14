@@ -89,7 +89,6 @@ user:
 
 team:
   lead: ""  # Set this to the technical lead's name for review notifications
-  lakar_client: ""  # Set this to your Lakar client name
 
 git:
   default_branch: main
@@ -111,7 +110,11 @@ build:
     dev: "{auto-detected or default}"
   dev_port: 3000
 
-lakar:
+project_management:
+  provider: lakar            # lakar | notetask
+  client: ""                 # lakar only — your Lakar client name
+  project_identifier: ""     # notetask only — e.g. NOTET
+  workspace: ""              # notetask only
   statuses:
     todo: "Todo"
     in_progress: "In Progress"
@@ -119,6 +122,7 @@ lakar:
     done: "Done"
     paused: null
     blocked: null
+    canceled: null
 
 commits:
   types:
@@ -184,7 +188,7 @@ Project settings are in `.claude/project.yaml`. This includes:
 - `/fra:prd` - Define product requirements
 - `/fra:brand` - Define brand and UX guidelines
 - `/fra:testing` - Define testing strategy
-- `/fra:lakar` - Create Lakar project structure
+- `/fra:setup-pm` - Create the project-management structure
 - `/fra:save` - Commit and push changes
 
 ### Development (`/zao:` commands) — branch + PR workflow
@@ -232,7 +236,7 @@ Project planning documents are in the `docs/` folder:
 - `/fra:prd` - Describe what you want to build
 - `/fra:brand` - Describe how it should look and feel
 - `/fra:testing` - This gets generated automatically
-- `/fra:lakar` - Create tasks in Lakar
+- `/fra:setup-pm` - Create the project-management structure
 
 ### Working on Tasks (daily workflow)
 - `/zao:workflow` - See an overview of how this works

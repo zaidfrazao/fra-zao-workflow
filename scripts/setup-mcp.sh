@@ -59,7 +59,7 @@ echo "==> fra/zao MCP setup"
 require_cmd claude "install Claude Code first" || exit 1
 
 # ---- 1. lakar (stdio, node) ------------------------------------------------------
-echo "[1/5] lakar"
+echo "[1/6] lakar"
 if [[ -z "${LAKAR_API_KEY:-}" ]]; then
   echo "  ! LAKAR_API_KEY not set — skipping lakar. Set it in .env to enable task tracking." >&2
 else
@@ -76,7 +76,7 @@ else
 fi
 
 # ---- 2. pal (uvx, OpenRouter) ----------------------------------------------------
-echo "[2/5] pal"
+echo "[2/6] pal"
 if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
   echo "  ! OPENROUTER_API_KEY not set — skipping pal (planner/debug). Set it in .env to enable." >&2
 elif require_cmd uvx "install Astral uv (https://docs.astral.sh/uv/) for pal + serena"; then
@@ -85,14 +85,14 @@ elif require_cmd uvx "install Astral uv (https://docs.astral.sh/uv/) for pal + s
 fi
 
 # ---- 3. serena (uvx, no key) -----------------------------------------------------
-echo "[3/5] serena"
+echo "[3/6] serena"
 if require_cmd uvx "install Astral uv (https://docs.astral.sh/uv/) for serena + pal"; then
   add_server serena -- \
     uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context claude-code
 fi
 
 # ---- 4. context7 (npx, optional key) ---------------------------------------------
-echo "[4/5] context7"
+echo "[4/6] context7"
 if require_cmd npx "install Node.js for context7 + tavily"; then
   if [[ -n "${CONTEXT7_API_KEY:-}" ]]; then
     add_server context7 -e CONTEXT7_API_KEY="$CONTEXT7_API_KEY" -- npx -y @upstash/context7-mcp@latest
@@ -103,13 +103,22 @@ if require_cmd npx "install Node.js for context7 + tavily"; then
 fi
 
 # ---- 5. tavily (npx, key required) -----------------------------------------------
-echo "[5/5] tavily"
+echo "[5/6] tavily"
 if [[ -z "${TAVILY_API_KEY:-}" ]]; then
   echo "  ! TAVILY_API_KEY not set — skipping tavily (web search). Set it in .env to enable." >&2
 elif require_cmd npx "install Node.js for tavily + context7"; then
   add_server tavily -e TAVILY_API_KEY="$TAVILY_API_KEY" -- npx -y tavily-mcp@latest
 fi
 
+# ---- 6. notetask (http, bearer) --------------------------------------------------
+echo "[6/6] notetask"
+if [[ -z "${NOTETASK_API_KEY:-}" ]]; then
+  echo "  ! NOTETASK_API_KEY not set — skipping notetask. Set it in .env to enable Note&Task PM." >&2
+else
+  add_server notetask --transport http https://note-task-mcp.genesis-apps.com/mcp \
+    --header "Authorization: Bearer $NOTETASK_API_KEY"
+fi
+
 echo
 echo "==> Done. Verify with:  claude mcp list"
-echo "    Tools will resolve as mcp__lakar__*, mcp__pal__*, mcp__serena__*, mcp__context7__*, mcp__tavily__*"
+echo "    Tools will resolve as mcp__lakar__*, mcp__pal__*, mcp__serena__*, mcp__context7__*, mcp__tavily__*, mcp__notetask__*"

@@ -31,48 +31,21 @@
 
 ---
 
-## Task 1: Confirm `${CLAUDE_PLUGIN_ROOT}` substitution (spike)
+## Task 1: Confirm `${CLAUDE_PLUGIN_ROOT}` substitution (RESOLVED)
 
-The whole "shared reference doc" approach depends on command files being able to load `${CLAUDE_PLUGIN_ROOT}/reference/pm-mapping.md` at runtime. Confirm the variable resolves before building on it.
+**Outcome (2026-06-14):** `${CLAUDE_PLUGIN_ROOT}` does **NOT** expand inside command/skill
+markdown bodies — it only works in JSON hook/MCP/LSP configs (known limitation,
+anthropics/claude-code#9354). It behaves the same for installed plugins and `--plugin-dir`.
 
-**Files:**
-- Create (temporary): `plugins/zao/reference/_probe.md`
-- Modify (temporary): `plugins/zao/commands/workflow.md`
+**Decision — inline approach (the plan's documented fallback):**
+- `pm-mapping.md` (Task 2) is still authored in both plugins as the **canonical maintainer
+  reference** and the target of the diff-sync check. Commands do **not** load it at runtime.
+- Each PM-touching command **inlines a self-contained "Project management provider" block**
+  covering exactly the operations it performs. Simple `/zao` commands get a 2–4 row table;
+  `/fra:setup-pm` carries the full table. The canonical "Inline Provider Block" used by the
+  simple commands is defined in Task 4, Step 1.
 
-- [ ] **Step 1: Add a probe reference file**
-
-Create `plugins/zao/reference/_probe.md`:
-
-```markdown
-PROBE_OK
-```
-
-- [ ] **Step 2: Temporarily make workflow.md read it**
-
-At the very top of the body of `plugins/zao/commands/workflow.md` (after frontmatter), add:
-
-```markdown
-DEBUG: Read the file `${CLAUDE_PLUGIN_ROOT}/reference/_probe.md` and print its contents verbatim, then continue.
-```
-
-- [ ] **Step 3: Run the command in the installed-plugin context**
-
-In a Claude Code session with the `zao` plugin installed (or launched via `--plugin-dir plugins/zao`), run `/zao:workflow`.
-Expected: the output includes `PROBE_OK`, proving `${CLAUDE_PLUGIN_ROOT}` resolved to the plugin directory.
-
-- [ ] **Step 4: Decide path based on result**
-
-- If `PROBE_OK` printed → `${CLAUDE_PLUGIN_ROOT}` works; proceed with the plan as written.
-- If it did NOT resolve (literal `${CLAUDE_PLUGIN_ROOT}` or file-not-found) → **fallback**: instead of one shared file loaded by path, the mapping table from Task 2 is inlined as a collapsed `<details>` section at the bottom of each PM-touching command. In that case, Task 2 still authors the canonical content; Tasks 4–8 paste the table inline rather than referencing the path. Record the decision at the top of the plan file before continuing.
-
-- [ ] **Step 5: Revert the probe**
-
-Remove the DEBUG line from `plugins/zao/commands/workflow.md` and delete `plugins/zao/reference/_probe.md`.
-
-```bash
-rm plugins/zao/reference/_probe.md
-git add -A && git commit -m "chore: spike CLAUDE_PLUGIN_ROOT availability"
-```
+No probe code is needed. This task is complete; proceed to Task 2.
 
 ---
 
@@ -89,9 +62,14 @@ Create `plugins/fra/reference/pm-mapping.md` with exactly this content:
 ````markdown
 # PM provider mapping
 
-This reference is the single source of truth for how the `/fra:*` and `/zao:*` commands
-talk to a project-management backend. It is shipped identically in both the `fra` and `zao`
-plugins. **If you edit one copy, edit the other** — they must stay byte-identical.
+This reference is the canonical, maintainer-facing source of truth for how the `/fra:*` and
+`/zao:*` commands map abstract PM operations onto the Lakar and Note&Task MCP tools. It is
+shipped identically in both the `fra` and `zao` plugins. **If you edit one copy, edit the
+other** — they must stay byte-identical.
+
+> Note: `${CLAUDE_PLUGIN_ROOT}` does not expand in command markdown, so commands do **not** load
+> this file at runtime — each command inlines the subset of this table it needs. When you change
+> a mapping here, update the inlined copies in the affected command files too.
 
 ## Resolving the provider
 
@@ -252,21 +230,36 @@ git commit -m "feat: register notetask MCP server in setup script"
 **Files:**
 - Modify: `plugins/fra/commands/config.md`
 
-- [ ] **Step 1: Define the canonical PM Resolution snippet (reused later)**
+- [ ] **Step 1: Define the canonical Inline Provider Block (reused later)**
 
-This exact block is inserted into command bodies in later tasks. Keep it here for reference:
+Because `${CLAUDE_PLUGIN_ROOT}` does not expand in command bodies (Task 1), commands inline this
+self-contained block instead of loading `pm-mapping.md`. This **full** version (used by
+comment-writing commands) is the canonical text; simple commands use the trimmed variants noted
+in their tasks (drop rows for operations they don't perform).
 
 ```markdown
 ### Project management provider
 
-Before any task-tracking call:
-1. Read `.claude/project.yaml`.
-2. If a `project_management:` block exists, use `project_management.provider` (assume `lakar`
-   if the key is missing). Else if a legacy `lakar:` block exists, treat the provider as
-   `lakar`. Else default to `lakar`.
-3. Load `${CLAUDE_PLUGIN_ROOT}/reference/pm-mapping.md` and use the mapping for the resolved
-   provider. Status values come from `project_management.statuses.*` (or legacy
-   `lakar.statuses.*`).
+This command supports two PM backends. Resolve which from `.claude/project.yaml`:
+- If a `project_management:` block exists, use `project_management.provider` (assume `lakar` if
+  that key is absent).
+- Else if a legacy `lakar:` block exists, the provider is `lakar` (statuses from
+  `lakar.statuses.*`, client from `team.lakar_client`).
+- Else default to `lakar`.
+
+Status **values** come from config (`project_management.statuses.*`, or legacy
+`lakar.statuses.*`). Wherever a step below names an `mcp__lakar__*` tool, use the resolved
+provider's equivalent:
+
+| Operation | Lakar (`provider: lakar`) | Note&Task (`provider: notetask`) |
+|---|---|---|
+| Fetch task by code | `mcp__lakar__get_task { id: CODE }` | `mcp__notetask__get_task { code: CODE }` |
+| Set task status | `mcp__lakar__update_task { id: CODE, status: <value> }` | `mcp__notetask__update_task { code: CODE, phase: <value> }` |
+| List tasks by status | `mcp__lakar__list_tasks { status: <value> }` | `mcp__notetask__list_tasks { phase: <value> }` |
+| Add comment | `mcp__lakar__create_comment { task_id: CODE, content }` — Lakar also needs `user_id` from `mcp__lakar__get_current_user` | `mcp__notetask__create_comment { code: CODE, content }` — no `user_id` |
+| List comments | `mcp__lakar__list_task_comments { task_id: CODE }` | `mcp__notetask__list_task_comments { code: CODE }` |
+
+(Full mapping for projects/phases/milestones/labels: see `reference/pm-mapping.md` in this plugin.)
 ```
 
 - [ ] **Step 2: Replace the config question for Lakar client with provider questions**
@@ -383,18 +376,31 @@ description: Create the project-management structure (phases, milestones, tasks)
 allowed-tools: AskUserQuestion, Read, mcp__lakar__list_clients, mcp__lakar__list_projects, mcp__lakar__get_project, mcp__lakar__create_project, mcp__lakar__update_project, mcp__lakar__list_phases, mcp__lakar__list_project_phases, mcp__lakar__create_phase, mcp__lakar__update_phase, mcp__lakar__list_milestones, mcp__lakar__create_milestone, mcp__lakar__update_milestone, mcp__lakar__create_milestone_task, mcp__lakar__list_tasks, mcp__lakar__create_task, mcp__lakar__update_task, mcp__lakar__list_labels, mcp__lakar__create_label, mcp__lakar__assign_label_to_task, mcp__notetask__list_workspaces, mcp__notetask__list_projects, mcp__notetask__get_project, mcp__notetask__create_project, mcp__notetask__list_phases, mcp__notetask__create_phase, mcp__notetask__list_milestones, mcp__notetask__create_milestone, mcp__notetask__create_task, mcp__notetask__list_tasks, mcp__notetask__list_labels, mcp__notetask__create_label, mcp__notetask__assign_label_to_task, mcp__pal__planner
 ```
 
-3. After the title line, insert the PM Resolution snippet:
+3. After the title line, insert this provider block (setup-pm uses the full hierarchy, so it
+   carries the complete mapping inline):
 ```markdown
 ### Project management provider
 
-Before any structure call:
-1. Read `.claude/project.yaml`.
-2. If a `project_management:` block exists, use `project_management.provider` (assume `lakar`
-   if the key is missing). Else if a legacy `lakar:` block exists, treat the provider as
-   `lakar`. Else default to `lakar`.
-3. Load `${CLAUDE_PLUGIN_ROOT}/reference/pm-mapping.md` and use the mapping for the resolved
-   provider. Status values come from `project_management.statuses.*` (or legacy
-   `lakar.statuses.*`).
+This command builds the structure in one of two PM backends. Resolve which from
+`.claude/project.yaml`: if a `project_management:` block exists use `project_management.provider`
+(assume `lakar` if absent); else if a legacy `lakar:` block exists the provider is `lakar`; else
+default to `lakar`. Status values come from `project_management.statuses.*` (or legacy
+`lakar.statuses.*`). Use the provider-correct tool for every structure call:
+
+| Operation | Lakar | Note&Task |
+|---|---|---|
+| List projects | `mcp__lakar__list_projects` | `mcp__notetask__list_projects` |
+| Create project | `mcp__lakar__create_project { client_id, name, description }` | `mcp__notetask__create_project { name, identifier }` |
+| List phases | `mcp__lakar__list_project_phases { project_id }` | `mcp__notetask__list_phases { projectIdentifier }` |
+| Create phase | `mcp__lakar__create_phase { project_id, name, position }` | `mcp__notetask__create_phase { projectIdentifier, name }` |
+| List milestones | `mcp__lakar__list_milestones { phase_id }` | `mcp__notetask__list_milestones { phaseId }` |
+| Create milestone | `mcp__lakar__create_milestone { phase_id, name, position }` | `mcp__notetask__create_milestone { phaseId, name }` |
+| Create task in milestone | `mcp__lakar__create_milestone_task { milestone_id, title, description, type, story_points, status }` | `mcp__notetask__create_task { projectIdentifier, milestoneId, title, description, taskType, priority, phase }` |
+| List labels | `mcp__lakar__list_labels` | `mcp__notetask__list_labels { workspaceId }` |
+| Create label | `mcp__lakar__create_label { name }` | `mcp__notetask__create_label { workspaceId, name }` |
+| Assign label | `mcp__lakar__assign_label_to_task { task_id, label_id }` | `mcp__notetask__assign_label_to_task { code, labelId }` |
+
+(For full notes/gotchas see `reference/pm-mapping.md` in this plugin.)
 ```
 
 4. Replace "Step 2 of the config read" reference: change the line
@@ -551,20 +557,31 @@ notetask tools, and (b) insert the PM Resolution snippet near the top of the bod
 reword status-update / comment instructions to "use the provider-correct tool from
 `pm-mapping.md`". The exact per-file tool additions follow.
 
-**The PM Resolution snippet (insert verbatim after the command's first paragraph in each file):**
+**The Inline Provider Block (insert verbatim after the command's first paragraph in each file).**
+This is the full version (covers get/status/list/comments). Commands that never comment may drop
+the two comment rows; all 8 files in this task may keep the full block for simplicity:
 
 ```markdown
 ### Project management provider
 
-Before any task-tracking call:
-1. Read `.claude/project.yaml`.
-2. If a `project_management:` block exists, use `project_management.provider` (assume `lakar`
-   if the key is missing). Else if a legacy `lakar:` block exists, treat the provider as
-   `lakar`. Else default to `lakar`.
-3. Load `${CLAUDE_PLUGIN_ROOT}/reference/pm-mapping.md` and use the mapping for the resolved
-   provider. Status values come from `project_management.statuses.*` (or legacy
-   `lakar.statuses.*`). Where instructions below name an `mcp__lakar__*` tool, use the
-   provider's equivalent from that mapping.
+This command supports two PM backends. Resolve which from `.claude/project.yaml`:
+- If a `project_management:` block exists, use `project_management.provider` (assume `lakar` if
+  that key is absent).
+- Else if a legacy `lakar:` block exists, the provider is `lakar` (statuses from
+  `lakar.statuses.*`, client from `team.lakar_client`).
+- Else default to `lakar`.
+
+Status **values** come from config (`project_management.statuses.*`, or legacy
+`lakar.statuses.*`). Wherever a step below names an `mcp__lakar__*` tool, use the resolved
+provider's equivalent:
+
+| Operation | Lakar (`provider: lakar`) | Note&Task (`provider: notetask`) |
+|---|---|---|
+| Fetch task by code | `mcp__lakar__get_task { id: CODE }` | `mcp__notetask__get_task { code: CODE }` |
+| Set task status | `mcp__lakar__update_task { id: CODE, status: <value> }` | `mcp__notetask__update_task { code: CODE, phase: <value> }` |
+| List tasks by status | `mcp__lakar__list_tasks { status: <value> }` | `mcp__notetask__list_tasks { phase: <value> }` |
+| Add comment | `mcp__lakar__create_comment { task_id: CODE, content }` — Lakar also needs `user_id` from `mcp__lakar__get_current_user` | `mcp__notetask__create_comment { code: CODE, content }` — no `user_id` |
+| List comments | `mcp__lakar__list_task_comments { task_id: CODE }` | `mcp__notetask__list_task_comments { code: CODE }` |
 ```
 
 - [ ] **Step 1: begin-task.md**
@@ -659,17 +676,18 @@ In each of `plugins/zao/commands/implement-task.md`, `fix-issue.md`, `adjust-fea
 change the leading `mcp__lakar__get_task,` in `allowed-tools` to
 `mcp__lakar__get_task, mcp__notetask__get_task,`.
 
-- [ ] **Step 2: Insert the PM Resolution snippet into each**
+- [ ] **Step 2: Insert the provider block into each**
 
 Insert this block after the first paragraph of each of the three files:
 
 ```markdown
 ### Project management provider
 
-This command only reads task context. Read `.claude/project.yaml`; if
-`project_management.provider` is `notetask` (default `lakar`), fetch the task with
-`mcp__notetask__get_task { code: CODE }` instead of `mcp__lakar__get_task`. See
-`${CLAUDE_PLUGIN_ROOT}/reference/pm-mapping.md`.
+This command only reads task context. Read `.claude/project.yaml` and resolve the provider: if a
+`project_management:` block exists use `project_management.provider` (assume `lakar` if absent);
+else if a legacy `lakar:` block exists the provider is `lakar`; else default to `lakar`. If the
+provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: CODE }` instead of
+`mcp__lakar__get_task { id: CODE }`.
 ```
 
 - [ ] **Step 3: Verify**
