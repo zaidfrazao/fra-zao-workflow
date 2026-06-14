@@ -1,9 +1,30 @@
 ---
 description: Complete the task - merge the PR, clean up, and mark as done
-allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, Bash, AskUserQuestion, Read, KillShell
+allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, Bash, AskUserQuestion, Read, KillShell, mcp__notetask__get_task, mcp__notetask__update_task, mcp__notetask__create_comment, mcp__notetask__get_current_user
 ---
 
 Finish the current task by merging and cleaning up.
+
+### Project management provider
+
+This command supports two PM backends. Resolve which from `.claude/project.yaml`:
+- If a `project_management:` block exists, use `project_management.provider` (assume `lakar` if
+  that key is absent).
+- Else if a legacy `lakar:` block exists, the provider is `lakar` (statuses from
+  `lakar.statuses.*`, client from `team.lakar_client`).
+- Else default to `lakar`.
+
+Status **values** come from config (`project_management.statuses.*`, or legacy
+`lakar.statuses.*`). Wherever a step below names an `mcp__lakar__*` tool, use the resolved
+provider's equivalent:
+
+| Operation | Lakar (`provider: lakar`) | Note&Task (`provider: notetask`) |
+|---|---|---|
+| Fetch task by code | `mcp__lakar__get_task { id: CODE }` | `mcp__notetask__get_task { code: CODE }` |
+| Set task status | `mcp__lakar__update_task { id: CODE, status: <value> }` | `mcp__notetask__update_task { code: CODE, phase: <value> }` |
+| List tasks by status | `mcp__lakar__list_tasks { status: <value> }` | `mcp__notetask__list_tasks { phase: <value> }` |
+| Add comment | `mcp__lakar__create_comment { task_id: CODE, content }` — Lakar also needs `user_id` from `mcp__lakar__get_current_user` | `mcp__notetask__create_comment { code: CODE, content }` — no `user_id` |
+| List comments | `mcp__lakar__list_task_comments { task_id: CODE }` | `mcp__notetask__list_task_comments { code: CODE }` |
 
 ## Relevant MCP Tools
 - **Lakar**: Mark task as "Done", add closing notes if needed
@@ -250,7 +271,7 @@ Finish the current task by merging and cleaning up.
 
 ## Important
 
-- **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_
+- **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_ This applies to Lakar only — Note&Task resolves the author from the API key, so skip get_current_user / user_id when provider is notetask.
 - Check `git.require_pr_approval` from config - if true (default), require PR approval before merging
 - Use `git.merge_strategy` from config - don't assume squash
 - Use `git.delete_branch_after_merge` from config
