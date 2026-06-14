@@ -1,6 +1,6 @@
 ---
 description: Generate or update the project configuration file for existing projects
-allowed-tools: AskUserQuestion, Bash, Read, Write
+allowed-tools: AskUserQuestion, Bash, Read, Write, mcp__notetask__list_workspaces
 ---
 
 Generate or update the `.claude/project.yaml` configuration file for an existing project.
@@ -47,8 +47,17 @@ If regenerating or creating new, use `AskUserQuestion` to ask:
    - This is used for @mentions in Lakar comments
    - Can be left blank
 
-6. "What is your Lakar client name?" (optional)
-   - Can be left blank if not using Lakar
+6. "Which project-management app should this project use?"
+   - Options:
+     - **Lakar** (default) - the original backend
+     - **Note&Task** - alternative PM app
+
+7. If **Lakar**: "What is your Lakar client name?" (optional, can be left blank)
+
+8. If **Note&Task**:
+   - "What project identifier should tasks use? (1–6 uppercase letters/digits, e.g. NOTET)"
+   - Resolve the workspace: call `mcp__notetask__list_workspaces`. If exactly one, use it
+     silently; if several, ask which; store its name.
 
 ### Step 3: Detect Build System
 
@@ -102,7 +111,20 @@ user:
 
 team:
   lead: "{team-lead or empty}"
-  lakar_client: "{lakar-team or empty}"
+
+project_management:
+  provider: {provider}            # lakar | notetask  (default lakar)
+  client: "{lakar-client or empty}"      # lakar only (was team.lakar_client)
+  project_identifier: "{identifier or empty}"  # notetask only
+  workspace: "{workspace or empty}"            # notetask only
+  statuses:
+    todo: "{Todo | todo}"
+    in_progress: "{In Progress | in_progress}"
+    in_review: "{In Review | in_review}"
+    done: "{Done | done}"
+    paused: null
+    blocked: null
+    canceled: null
 
 git:
   default_branch: main
@@ -124,15 +146,6 @@ build:
     dev: "{detected or default}"
   dev_port: 3000
 
-lakar:
-  statuses:
-    todo: "Todo"
-    in_progress: "In Progress"
-    in_review: "In Review"
-    done: "Done"
-    paused: null
-    blocked: null
-
 commits:
   types:
     feature: "feat"
@@ -150,6 +163,8 @@ docs:
   brand_template: {full if UI project, minimal otherwise}
   testing_template: full
 ```
+
+Use Lakar status names (`Todo`, `In Progress`, …) when `provider: lakar`; use Note&Task phase values (`todo`, `in_progress`, `in_review`, `done`, and `canceled`) when `provider: notetask`.
 
 **Build command defaults by tool:**
 - **npm**: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test`, `npm run dev`
@@ -256,6 +271,16 @@ If updating an existing config (user chose "Update it"):
 3. Only ask questions for missing fields
 4. Preserve all existing values
 5. Write the updated config
+
+### Migrating a legacy config
+
+If the existing file has a top-level `lakar:` block and/or `team.lakar_client` but no
+`project_management:` block:
+1. Create `project_management:` with `provider: lakar`.
+2. Move `team.lakar_client` → `project_management.client` (then remove `lakar_client` from `team`).
+3. Move `lakar.statuses.*` → `project_management.statuses.*` verbatim.
+4. Remove the old top-level `lakar:` block.
+Preserve every value exactly; only the location changes.
 
 ## Important
 
