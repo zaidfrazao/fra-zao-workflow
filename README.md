@@ -16,7 +16,7 @@ fra-zao-workflow/
 ├── plugins/
 │   ├── fra/
 │   │   ├── .claude-plugin/plugin.json
-│   │   └── commands/           # /fra:brand, /fra:init, /fra:lakar, …
+│   │   └── commands/           # /fra:brand, /fra:init, /fra:setup-pm, …
 │   └── zao/
 │       ├── .claude-plugin/plugin.json
 │       └── commands/           # /zao:begin-task, /zao:workflow, …
@@ -54,7 +54,7 @@ claude mcp list               # verify
 | Server | Transport | Key needed | Used by |
 |---|---|---|---|
 | `lakar` | stdio (node) | `LAKAR_API_KEY` *(required)* | task tracking — most `/fra` and `/zao` commands |
-| `pal` | uvx | `OPENROUTER_API_KEY` *(required)* | `planner` (`/zao:begin-task`, `/fra:lakar`), `debug` (`/zao:fix-issue`) |
+| `pal` | uvx | `OPENROUTER_API_KEY` *(required)* | `planner` (`/zao:begin-task`, `/fra:setup-pm`), `debug` (`/zao:fix-issue`) |
 | `serena` | uvx | none | semantic code editing (`/zao:adjust-feature`, `/zao:fix-issue`) |
 | `context7` | npx | `CONTEXT7_API_KEY` *(optional)* | library docs lookup |
 | `tavily` | npx | `TAVILY_API_KEY` *(required)* | web search |
