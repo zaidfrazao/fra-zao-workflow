@@ -3,7 +3,7 @@ description: Create the project-management structure (phases, milestones, tasks)
 allowed-tools: AskUserQuestion, Read, mcp__lakar__list_clients, mcp__lakar__list_projects, mcp__lakar__get_project, mcp__lakar__create_project, mcp__lakar__update_project, mcp__lakar__list_phases, mcp__lakar__list_project_phases, mcp__lakar__create_phase, mcp__lakar__update_phase, mcp__lakar__list_milestones, mcp__lakar__create_milestone, mcp__lakar__update_milestone, mcp__lakar__create_milestone_task, mcp__lakar__list_tasks, mcp__lakar__create_task, mcp__lakar__update_task, mcp__lakar__list_labels, mcp__lakar__create_label, mcp__lakar__assign_label_to_task, mcp__notetask__list_workspaces, mcp__notetask__list_projects, mcp__notetask__get_project, mcp__notetask__create_project, mcp__notetask__list_phases, mcp__notetask__create_phase, mcp__notetask__list_milestones, mcp__notetask__create_milestone, mcp__notetask__create_task, mcp__notetask__list_tasks, mcp__notetask__list_labels, mcp__notetask__create_label, mcp__notetask__assign_label_to_task, mcp__pal__planner
 ---
 
-Create Lakar phases, milestones, and tasks from the planning documents.
+Create the project-management phases, milestones, and tasks from the planning documents (in Lakar or Note&Task, per project config).
 
 ### Project management provider
 
@@ -209,7 +209,7 @@ Labels created: {list}
 Totals: {N} phases, {M} milestones, {K} tasks, {P} story points.
 
 Next steps:
-1. Review the tasks in Lakar
+1. Review the tasks in your PM app (Lakar or Note&Task)
 2. Adjust priorities / assignees as needed
 3. Start the first task: `/zao:begin-task {first task code}`
 ```
