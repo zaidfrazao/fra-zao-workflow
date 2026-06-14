@@ -136,7 +136,7 @@ provider's equivalent:
    ```
 
 5. **Update Lakar status**
-   - Use `mcp__lakar__update_task` to set status to `{lakar.statuses.in_review}`
+   - Use `mcp__lakar__update_task` to set status to `{statuses.in_review}` (or the notetask equivalent `update_task { code, phase }` per the provider block above)
 
 6. **Add technical notes (if applicable and team.lead is set)**
 

@@ -123,7 +123,7 @@ provider's equivalent:
    ---
 
 3. **Update Lakar status**
-   - Use `mcp__lakar__update_task` to set status to `{lakar.statuses.in_progress}`
+   - Use `mcp__lakar__update_task` to set status to `{statuses.in_progress}` (or the notetask equivalent `update_task { code, phase }` per the provider block above)
 
    **For technical users:**
    > "Status → In Progress"

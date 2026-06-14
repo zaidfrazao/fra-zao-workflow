@@ -83,7 +83,7 @@ provider's equivalent:
    ---
 
 5. **Update Lakar status** (if it was changed to Paused/On Hold)
-   - Use `mcp__lakar__update_task` to set status back to "In Progress"
+   - Use `mcp__lakar__update_task` to set status back to `{statuses.in_progress}` (or the notetask equivalent `update_task { code, phase }` per the provider block above)
 
 6. **Show current state**
 

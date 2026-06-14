@@ -181,7 +181,7 @@ provider's equivalent:
    This cleanup is silent - don't report if these directories don't exist.
 
 7. **Update Lakar status**
-   - Use `mcp__lakar__update_task` to set status to `{lakar.statuses.done}`
+   - Use `mcp__lakar__update_task` to set status to `{statuses.done}` (or the notetask equivalent `update_task { code, phase }` per the provider block above)
 
 8. **Add closing notes (if applicable)**
 

@@ -1,6 +1,6 @@
 ---
 description: See your progress through the project setup phases
-allowed-tools: Bash, Read, mcp__lakar__list_projects, mcp__lakar__list_clients, mcp__notetask__list_projects, mcp__notetask__list_workspaces
+allowed-tools: Bash, Read, mcp__lakar__list_projects, mcp__lakar__list_clients, mcp__notetask__list_projects
 ---
 
 Show the current status of project setup and what needs to be done next.
