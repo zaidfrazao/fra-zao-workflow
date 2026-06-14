@@ -42,12 +42,12 @@ For local development you can instead launch with `claude --plugin-dir /home/him
 
 ### 2. Wire up the MCP servers
 
-The commands call tools on five MCP servers by their **plain** names — `mcp__lakar__*`, `mcp__pal__*`, `mcp__serena__*`, `mcp__context7__*`, `mcp__tavily__*`. These are **not** bundled in the plugins (a plugin-bundled server would be renamed `mcp__plugin_<plugin>_<server>__*` and silently break the commands). Register them with the setup script:
+The commands call tools on six MCP servers by their **plain** names — `mcp__lakar__*`, `mcp__pal__*`, `mcp__serena__*`, `mcp__context7__*`, `mcp__tavily__*`, `mcp__notetask__*`. These are **not** bundled in the plugins (a plugin-bundled server would be renamed `mcp__plugin_<plugin>_<server>__*` and silently break the commands). Register them with the setup script:
 
 ```bash
 cp .env.example .env
 $EDITOR .env                  # fill in your keys
-./scripts/setup-mcp.sh        # registers all five in user scope
+./scripts/setup-mcp.sh        # registers all six in user scope
 claude mcp list               # verify
 ```
 
@@ -58,6 +58,7 @@ claude mcp list               # verify
 | `serena` | uvx | none | semantic code editing (`/zao:adjust-feature`, `/zao:fix-issue`) |
 | `context7` | npx | `CONTEXT7_API_KEY` *(optional)* | library docs lookup |
 | `tavily` | npx | `TAVILY_API_KEY` *(required)* | web search |
+| `notetask` | http (bearer) | `NOTETASK_API_KEY` *(optional)* | task tracking for projects flagged `provider: notetask` |
 
 Prerequisites: **Node.js** (lakar, context7, tavily), **[uv/uvx](https://docs.astral.sh/uv/)** (pal, serena), **git**. The script clones and builds the Lakar server (`github.com/zaidlakar/lakar-pm`) into `$HOME/lakar-pm` on first run; override with `LAKAR_PM_DIR`.
 
@@ -75,7 +76,7 @@ Secrets live only in your local `.env` (gitignored) and your local `~/.claude.js
 | `/fra:prd` · `/fra:update-prd` | Define / revise the PRD |
 | `/fra:brand` · `/fra:update-brand` | Define / revise the brand & UX guide |
 | `/fra:testing` · `/fra:update-testing` | Define / revise the testing strategy |
-| `/fra:lakar` | Build the Lakar phase/milestone/task structure from the docs |
+| `/fra:setup-pm` | Build the phase/milestone/task structure (Lakar or Note&Task) |
 | `/fra:save` | Commit and push |
 
 **`/zao` — task development**
@@ -96,3 +97,11 @@ Secrets live only in your local `.env` (gitignored) and your local `~/.claude.js
 - **No `/tre:` namespace.** Earlier drafts of `/fra:init` generated a `CLAUDE.md` referencing a fast-path `/tre:*` command set that never existed; those references have been removed from `init.md` and `lakar.md`. If you ever build main-branch/no-PR fast-path commands, add them as a third `tre` plugin the same way the `fra`/`zao` plugins are structured.
 - **Serena / Context7 duplication.** If you already have Serena or Context7 installed as *marketplace plugins*, they expose tools under `mcp__plugin_serena_serena__*` / `mcp__plugin_context7_context7__*`. The commands need the plain `mcp__serena__*` / `mcp__context7__*` names this script registers. Both can coexist; remove the marketplace versions if you want to avoid duplicate tools.
 - This directory is the marketplace root. To distribute it, push it to a Git repo and `/plugin marketplace add <repo-url>` instead of the local path.
+- **Choosing a PM backend per project.** Set `project_management.provider` to `lakar` (default)
+  or `notetask` in `.claude/project.yaml`. Projects with no `project_management` block fall back
+  to Lakar, so existing projects are unaffected. `/fra:config` migrates a legacy `lakar:` config.
+- **`/fra:lakar` is deprecated** in favor of `/fra:setup-pm` (provider-aware). The old name
+  still works as an alias.
+- **Mapping doc must stay in sync.** `plugins/fra/reference/pm-mapping.md` and
+  `plugins/zao/reference/pm-mapping.md` are byte-identical copies — edit both. Verify with:
+  `diff plugins/fra/reference/pm-mapping.md plugins/zao/reference/pm-mapping.md`.
