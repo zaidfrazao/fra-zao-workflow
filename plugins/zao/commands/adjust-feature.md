@@ -1,9 +1,17 @@
 ---
 description: Make adjustments or tweaks to the current implementation
-allowed-tools: mcp__lakar__get_task, mcp__serena__find_symbol, mcp__serena__get_symbols_overview, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__search_for_pattern, mcp__serena__find_referencing_symbols, mcp__serena__list_dir, mcp__serena__find_file, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, Bash, Read, Write, Edit, Glob, Grep
+allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__serena__find_symbol, mcp__serena__get_symbols_overview, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__search_for_pattern, mcp__serena__find_referencing_symbols, mcp__serena__list_dir, mcp__serena__find_file, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, Bash, Read, Write, Edit, Glob, Grep
 ---
 
 Make the adjustment: $ARGUMENTS
+
+### Project management provider
+
+This command only reads task context. Read `.claude/project.yaml` and resolve the provider: if a
+`project_management:` block exists use `project_management.provider` (assume `lakar` if absent);
+else if a legacy `lakar:` block exists the provider is `lakar`; else default to `lakar`. If the
+provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: CODE }` instead of
+`mcp__lakar__get_task { id: CODE }`.
 
 ## Relevant MCP Tools
 - **Serena**: Navigate and edit code using symbol-level operations
