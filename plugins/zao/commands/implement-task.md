@@ -1,6 +1,6 @@
 ---
 description: Build the task according to the approved plan
-allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__serena__find_symbol, mcp__serena__get_symbols_overview, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__search_for_pattern, mcp__serena__find_referencing_symbols, mcp__serena__list_dir, mcp__serena__find_file, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, Bash, Read, Write, Edit, Glob, Grep
+allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, Bash, Read, Write, Edit, Glob, Grep
 ---
 
 Implement the task that was planned in `/zao:begin-task`.
@@ -14,7 +14,6 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
 `mcp__lakar__get_task { id: CODE }`.
 
 ## Relevant MCP Tools
-- **Serena**: Navigate and edit code intelligently using symbol-level operations
 - **Context7**: Look up documentation for libraries (Electron, React, Colyseus, etc.)
 - **Tavily**: Search for solutions, examples, or workarounds for specific problems
 
@@ -56,14 +55,13 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
       - Use `mcp__tavily__tavily_search` for general solutions or unfamiliar patterns
 
    c. **Navigate code intelligently**
-      - Use `mcp__serena__get_symbols_overview` to understand file structure before editing
-      - Use `mcp__serena__find_symbol` to locate specific functions/classes
-      - Use `mcp__serena__find_referencing_symbols` to understand dependencies
+      - Use `Grep` to locate specific functions/classes and understand file structure before editing
+      - Use `Glob` to find relevant files, and `Grep` for references to understand dependencies
+      - Use `Read` to inspect the files you'll change
 
    d. **Make changes**
-      - Prefer Serena's symbol-level editing (`replace_symbol_body`, `insert_after_symbol`) for precision
-      - Use standard Edit tool for smaller changes
-      - Use Write tool only for new files
+      - Use the `Edit` tool for changes to existing files
+      - Use the `Write` tool only for new files
 
    e. **Brief progress update**
       > "Done with step {n}. {One sentence about what was accomplished}"

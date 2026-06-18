@@ -1,6 +1,6 @@
 ---
 description: Make adjustments or tweaks to the current implementation
-allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__serena__find_symbol, mcp__serena__get_symbols_overview, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__search_for_pattern, mcp__serena__find_referencing_symbols, mcp__serena__list_dir, mcp__serena__find_file, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, Bash, Read, Write, Edit, Glob, Grep
+allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, Bash, Read, Write, Edit, Glob, Grep
 ---
 
 Make the adjustment: $ARGUMENTS
@@ -14,7 +14,6 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
 `mcp__lakar__get_task { id: CODE }`.
 
 ## Relevant MCP Tools
-- **Serena**: Navigate and edit code using symbol-level operations
 - **Context7**: Look up library documentation for implementation options
 - **Tavily**: Research patterns, examples, or alternative approaches
 
@@ -62,8 +61,8 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
    > "Let me make that change."
 
 2. **Locate the relevant code**
-   - Use `mcp__serena__search_for_pattern` or `mcp__serena__find_symbol` to find what needs changing
-   - Use `mcp__serena__get_symbols_overview` to understand the file structure
+   - Use `Grep` to find what needs changing, and `Glob` to locate related files
+   - Use `Read` to understand the file structure before editing
 
 3. **Research if needed**
    - Use `mcp__context7__get-library-docs` for library-specific implementations
@@ -81,7 +80,7 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
    - Wait for clarification before proceeding
 
 5. **Make the adjustment**
-   - Use Serena's symbol-level editing for precise changes
+   - Use the `Edit` tool for precise changes
    - Explain what you're changing
 
    **For technical users:**

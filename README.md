@@ -30,24 +30,26 @@ fra-zao-workflow/
 
 ### 1. Install the plugins
 
-From a Claude Code session (use the absolute path to this directory):
+From a Claude Code session, add this repo as a marketplace and install both plugins:
 
 ```
-/plugin marketplace add /home/himothy/project-007/fra-zao-workflow
+/plugin marketplace add zaidfrazao/fra-zao-workflow
 /plugin install fra@fra-zao-workflow
 /plugin install zao@fra-zao-workflow
 ```
 
-For local development you can instead launch with `claude --plugin-dir /home/himothy/project-007/fra-zao-workflow/plugins/fra --plugin-dir .../zao`.
+`/plugin marketplace add` also accepts a full Git URL (`https://github.com/zaidfrazao/fra-zao-workflow.git`) or, if you've cloned the repo, the absolute path to your local checkout. For local development you can instead launch with `claude --plugin-dir <repo>/plugins/fra --plugin-dir <repo>/plugins/zao`.
 
 ### 2. Wire up the MCP servers
 
-The commands call tools on six MCP servers by their **plain** names — `mcp__lakar__*`, `mcp__pal__*`, `mcp__serena__*`, `mcp__context7__*`, `mcp__tavily__*`, `mcp__notetask__*`. These are **not** bundled in the plugins (a plugin-bundled server would be renamed `mcp__plugin_<plugin>_<server>__*` and silently break the commands). Register them with the setup script:
+The commands call tools on five MCP servers by their **plain** names — `mcp__lakar__*`, `mcp__pal__*`, `mcp__context7__*`, `mcp__tavily__*`, `mcp__notetask__*`. These are **not** bundled in the plugins (a plugin-bundled server would be renamed `mcp__plugin_<plugin>_<server>__*` and silently break the commands). They're registered from a local clone of this repo with the setup script:
 
 ```bash
+git clone https://github.com/zaidfrazao/fra-zao-workflow.git
+cd fra-zao-workflow
 cp .env.example .env
 $EDITOR .env                  # fill in your keys
-./scripts/setup-mcp.sh        # registers all six in user scope
+./scripts/setup-mcp.sh        # registers all five in user scope
 claude mcp list               # verify
 ```
 
@@ -55,12 +57,11 @@ claude mcp list               # verify
 |---|---|---|---|
 | `lakar` | stdio (node) | `LAKAR_API_KEY` *(required)* | task tracking — most `/fra` and `/zao` commands |
 | `pal` | uvx | `OPENROUTER_API_KEY` *(required)* | `planner` (`/zao:begin-task`, `/fra:setup-pm`), `debug` (`/zao:fix-issue`) |
-| `serena` | uvx | none | semantic code editing (`/zao:adjust-feature`, `/zao:fix-issue`) |
 | `context7` | npx | `CONTEXT7_API_KEY` *(optional)* | library docs lookup |
 | `tavily` | npx | `TAVILY_API_KEY` *(required)* | web search |
 | `notetask` | http (bearer) | `NOTETASK_API_KEY` *(optional)* | task tracking for projects flagged `provider: notetask` |
 
-Prerequisites: **Node.js** (lakar, context7, tavily), **[uv/uvx](https://docs.astral.sh/uv/)** (pal, serena), **git**. The script clones and builds the Lakar server (`github.com/zaidlakar/lakar-pm`) into `$HOME/lakar-pm` on first run; override with `LAKAR_PM_DIR`.
+Prerequisites: **Node.js** (lakar, context7, tavily), **[uv/uvx](https://docs.astral.sh/uv/)** (pal), **git**. The script clones and builds the Lakar server (`github.com/zaidlakar/lakar-pm`) into `$HOME/lakar-pm` on first run; override with `LAKAR_PM_DIR`.
 
 Secrets live only in your local `.env` (gitignored) and your local `~/.claude.json` — nothing secret is committed.
 
@@ -95,7 +96,7 @@ Secrets live only in your local `.env` (gitignored) and your local `~/.claude.js
 ## Notes
 
 - **No `/tre:` namespace.** Earlier drafts of `/fra:init` generated a `CLAUDE.md` referencing a fast-path `/tre:*` command set that never existed; those references have been removed from `init.md` and `lakar.md`. If you ever build main-branch/no-PR fast-path commands, add them as a third `tre` plugin the same way the `fra`/`zao` plugins are structured.
-- **Serena / Context7 duplication.** If you already have Serena or Context7 installed as *marketplace plugins*, they expose tools under `mcp__plugin_serena_serena__*` / `mcp__plugin_context7_context7__*`. The commands need the plain `mcp__serena__*` / `mcp__context7__*` names this script registers. Both can coexist; remove the marketplace versions if you want to avoid duplicate tools.
+- **Context7 duplication.** If you already have Context7 installed as a *marketplace plugin*, it exposes tools under `mcp__plugin_context7_context7__*`. The commands need the plain `mcp__context7__*` name this script registers. Both can coexist; remove the marketplace version if you want to avoid duplicate tools.
 - This directory is the marketplace root. To distribute it, push it to a Git repo and `/plugin marketplace add <repo-url>` instead of the local path.
 - **Choosing a PM backend per project.** Set `project_management.provider` to `lakar` (default)
   or `notetask` in `.claude/project.yaml`. Projects with no `project_management` block fall back

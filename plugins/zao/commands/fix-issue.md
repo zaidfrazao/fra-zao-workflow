@@ -1,6 +1,6 @@
 ---
 description: Fix a bug or issue you've found in the current task
-allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__serena__find_symbol, mcp__serena__get_symbols_overview, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__search_for_pattern, mcp__serena__find_referencing_symbols, mcp__serena__list_dir, mcp__serena__find_file, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, mcp__pal__debug, Bash, Read, Write, Edit, Glob, Grep
+allowed-tools: mcp__lakar__get_task, mcp__notetask__get_task, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__tavily__tavily_search, mcp__tavily__tavily_extract, mcp__pal__debug, Bash, Read, Write, Edit, Glob, Grep
 ---
 
 Fix the issue: $ARGUMENTS
@@ -14,7 +14,6 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
 `mcp__lakar__get_task { id: CODE }`.
 
 ## Relevant MCP Tools
-- **Serena**: Navigate and edit code using symbol-level operations
 - **Context7**: Look up library documentation for correct usage
 - **Tavily**: Search for error messages, known issues, or solutions
 - **Zen Debug**: Systematic debugging for complex issues with root cause analysis
@@ -64,9 +63,9 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
 2. **Investigate the issue**
 
    a. **Understand what's affected**
-      - Use `mcp__serena__search_for_pattern` to find relevant code
-      - Use `mcp__serena__get_symbols_overview` to understand file structure
-      - Use `mcp__serena__find_referencing_symbols` to trace dependencies
+      - Use `Grep` to find relevant code and understand file structure
+      - Use `Glob` to locate related files, and `Grep` for references to trace dependencies
+      - Use `Read` to inspect the affected files
 
    b. **Research if needed**
       - Use `mcp__tavily__tavily_search` to look up error messages or similar issues
@@ -85,7 +84,7 @@ provider is `notetask`, fetch the task with `mcp__notetask__get_task { code: COD
    > "Found the issue: {simple explanation of what's wrong and why}"
 
 4. **Apply the fix**
-   - Use Serena's symbol-level editing for precise changes
+   - Use the `Edit` tool for precise changes
    - Explain what you're changing
 
    **For technical users:**
