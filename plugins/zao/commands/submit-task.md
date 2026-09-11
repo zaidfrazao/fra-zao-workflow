@@ -1,6 +1,6 @@
 ---
 description: Submit your work for review - creates a pull request and updates the task status
-allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, mcp__pal__precommit, Bash, Read, mcp__notetask__get_task, mcp__notetask__update_task, mcp__notetask__create_comment, mcp__notetask__get_current_user
+allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, mcp__pal__precommit, Bash, Read, Edit, Write, mcp__notetask__get_task, mcp__notetask__update_task, mcp__notetask__create_comment, mcp__notetask__get_current_user
 ---
 
 Submit the current task for review.
@@ -104,17 +104,50 @@ provider's equivalent:
    - Wait for user decision
    - If they want fixes, suggest `/zao:fix-issue`
 
-3. **Push the branch**
+3. **Update subsystem docs (only if the repo has `docs/subsystems/`)**
+
+   Some repos keep `CLAUDE.md` as a short map, one or two sentences per subsystem, and put the
+   long-form detail in `docs/subsystems/*.md`. If `docs/subsystems/` does not exist, skip this step.
+
+   If it exists:
+   - Find the doc for each subsystem this task changed (`ls docs/subsystems/`; CLAUDE.md's
+     architecture pointers link each subsystem to its doc). If the task created an area that fits
+     none of them, add a new `docs/subsystems/<area>.md` with the same header note as its siblings,
+     and link it from CLAUDE.md.
+   - Write the long-form notes **in that doc**: what changed and where the code lives, the gotchas
+     and why they exist, rejected alternatives, migrations, flags and their defaults, what is not
+     preview-testable, and the verify command. Add a new entry or update the existing one; don't
+     leave a superseded claim standing next to its correction.
+   - In `CLAUDE.md`, add or update **at most one or two sentences** for the subsystem, plus the
+     link to its doc. Never paste the long-form into CLAUDE.md. If the existing pointer is still
+     true, leave CLAUDE.md alone.
+   - Skip the step for changes that don't alter how a subsystem works (copy tweaks, small fixes
+     with no new gotcha).
+   - Commit the doc changes before pushing:
+     ```bash
+     git add docs/subsystems CLAUDE.md
+     git commit -m "docs: {task-code} subsystem notes
+
+     {commits.footer}"
+     ```
+
+   **For technical users:** mention which docs were updated in the completion report.
+   **For non-technical users:** say "I've updated the project notes so future work knows how this
+   part works."
+
+4. **Push the branch**
    ```bash
    git push -u origin $(git branch --show-current)
    ```
 
-4. **Create the pull request**
+5. **Create the pull request**
 
-   Generate PR body based on commits and task:
+   Generate PR body based on commits and task. **Always pass `--base {git.default_branch}`**:
+   without it `gh` targets the GitHub repo's default branch, which in repos with a separate
+   release branch is production (`main`), so a feature PR would skip the integration branch.
 
    ```bash
-   gh pr create --title "{task-code}: {title}" --body "$(cat <<'EOF'
+   gh pr create --base {git.default_branch} --title "{task-code}: {title}" --body "$(cat <<'EOF'
    ## Summary
    {Auto-generated summary of changes based on commits}
 
@@ -135,10 +168,10 @@ provider's equivalent:
    )"
    ```
 
-5. **Update Lakar status**
+6. **Update Lakar status**
    - Use `mcp__lakar__update_task` to set status to `{statuses.in_review}` (or the notetask equivalent `update_task { code, phase }` per the provider block above)
 
-6. **Add technical notes (if applicable and team.lead is set)**
+7. **Add technical notes (if applicable and team.lead is set)**
 
    Review the implementation and determine if there are noteworthy technical details:
    - New libraries or dependencies added
@@ -162,7 +195,7 @@ provider's equivalent:
 
    If nothing noteworthy, skip this step entirely (don't add an empty comment).
 
-7. **Report completion**
+8. **Report completion**
 
    **For technical users:**
 
@@ -221,6 +254,7 @@ provider's equivalent:
 
 - **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_ This applies to Lakar only — Note&Task resolves the author from the API key, so skip get_current_user / user_id when provider is notetask.
 - Always run precommit validation before submitting
+- If the repo has `docs/subsystems/`, subsystem detail goes there; CLAUDE.md gets at most a one- or two-sentence pointer
 - Use `team.lead` from config for technical notes - don't hardcode names
 - If `team.lead` is empty, omit the @mention entirely
 - Technical notes are only for significant considerations - don't add noise
