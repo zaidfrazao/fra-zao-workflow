@@ -1,96 +1,107 @@
 ---
 description: Pick up a paused task and continue where you left off
-allowed-tools: mcp__lakar__get_task, mcp__lakar__list_task_comments, mcp__lakar__update_task, Bash, mcp__notetask__get_task, mcp__notetask__list_task_comments, mcp__notetask__update_task
+allowed-tools: Skill, mcp__lakar__get_task, mcp__lakar__list_task_comments, mcp__lakar__update_task, Bash, mcp__notetask__get_task, mcp__notetask__list_task_comments, mcp__notetask__update_task, mcp__cairn__get_task_context, mcp__cairn__resume_task, mcp__cairn__update_task, mcp__cairn__list_tasks
 ---
 
 Resume a previously paused task.
 
 ### Project management provider
 
-This command supports two PM backends. Resolve which from `.claude/project.yaml`:
-- If a `project_management:` block exists, use `project_management.provider` (assume `lakar` if
-  that key is absent).
-- Else if a legacy `lakar:` block exists, the provider is `lakar` (statuses from
-  `lakar.statuses.*`, client from `team.lakar_client`).
-- Else default to `lakar`.
+Resolve the PM provider with the `zao:pm-provider` skill (Skill tool) before the first PM call,
+and use its mapping (`pm-mapping.md`) for every PM call below. Steps name the Lakar tool; for
+`notetask` and `cairn` use the mapped equivalent. Where Cairn behaves differently, the step says
+so under **Cairn:**. Lakar and Note&Task behaviour is unchanged.
 
-Status **values** come from config (`project_management.statuses.*`, or legacy
-`lakar.statuses.*`). Wherever a step below names an `mcp__lakar__*` tool, use the resolved
-provider's equivalent:
-
-| Operation | Lakar (`provider: lakar`) | Note&Task (`provider: notetask`) |
-|---|---|---|
-| Fetch task by code | `mcp__lakar__get_task { id: CODE }` | `mcp__notetask__get_task { code: CODE }` |
-| Set task status | `mcp__lakar__update_task { id: CODE, status: <value> }` | `mcp__notetask__update_task { code: CODE, phase: <value> }` |
-| List tasks by status | `mcp__lakar__list_tasks { status: <value> }` | `mcp__notetask__list_tasks { phase: <value> }` |
-| Add comment | `mcp__lakar__create_comment { task_id: CODE, content }` — Lakar also needs `user_id` from `mcp__lakar__get_current_user` | `mcp__notetask__create_comment { code: CODE, content }` — no `user_id` |
-| List comments | `mcp__lakar__list_task_comments { task_id: CODE }` | `mcp__notetask__list_task_comments { code: CODE }` |
+This command is not used inside milestone runs (it has no `--autonomous` mode); a run is resumed
+with `/zao:run-milestone --resume`.
 
 ## Relevant MCP Tools
-- **Lakar**: Fetch task details and pause notes
+- **PM provider** (Lakar, Note&Task or Cairn): fetch task details and the pause notes (Cairn:
+  the structured pause record returned by `resume_task`)
 
 ## Process
 
 1. **Determine which task to resume**
 
    a. **Check current branch**
+      - Read `.claude/project.yaml` for `git.default_branch` and `git.branch_prefixes`
       - Run `git branch --show-current`
 
-   b. **If already on a task branch:**
-      - Parse Lakar task code from branch name
+   b. **If already on a task branch** (the `zao:pm-provider` skill's branch rule finds a task):
+      - Lakar and Note&Task: the task code comes from the branch name
+      - **Cairn:** `mcp__cairn__get_task_context { branch: "<current branch>" }`
       - Use this task
 
-   c. **If on main/develop:**
-      - List recent task branches:
+   c. **If on `{git.default_branch}`** (or the branch is not a task branch):
+      - **Lakar and Note&Task:** list recent task branches, using every configured
+        `git.branch_prefixes` value (default `feature/`, `fix/`, `hotfix/`, `chore/`):
         ```bash
-        git branch --list "feature/*" --list "bugfix/*" --list "hotfix/*" --sort=-committerdate | head -5
+        git branch --list "{prefix-1}*" --list "{prefix-2}*" ... --sort=-committerdate | head -5
         ```
-      - If branches found, present options:
+      - **Cairn:** list paused tasks instead of guessing from branches:
+        `mcp__cairn__list_tasks { projectIdentifier: <PROJ>, paused: true }`
+      - If tasks found, present options:
         > "Found these paused tasks:
-        > 1. {branch-1} - {task title if determinable}
-        > 2. {branch-2}
+        > 1. {branch-1 or code-1} - {task title if determinable}
+        > 2. {branch-2 or code-2}
         > ...
         >
         > Which would you like to resume? (Enter the number or task code)"
       - Wait for user selection
-      - If no branches found:
+      - If none found:
         > "No paused tasks found. Run `/zao:begin-task TSK-XXX` to start a new task."
         - Stop execution
 
-2. **Switch to the task branch** (if not already on it)
+   d. **Cairn:** for the chosen task, call `mcp__cairn__get_task_context { code }` if you have not
+      already. If `activeRun` shows the task `queued` or in flight in a milestone run, stop:
+      > "{CODE} is part of run {activeRun.runId}; resume the run with `/zao:run-milestone --resume`."
+
+2. **Fetch the pause notes**
+   - **Lakar and Note&Task:** use `mcp__lakar__get_task` to get task info and
+     `mcp__lakar__list_task_comments` to find pause notes (comments containing "Task Paused" or
+     similar markers)
+   - **Cairn:** `mcp__cairn__resume_task { code }`. It clears the paused flag and returns the pause
+     record (`progress`, `remaining`, `note`, `branch`, who paused it and when). No
+     `list_task_comments` call is needed. `pause: null` means the task was not paused; carry on
+     with the task's linked branch.
+
+3. **Switch to the task branch** (if not already on it)
+   - The branch is the one chosen above (**Cairn:** the pause record's `branch`, else
+     `git.branch` from `get_task_context`)
    ```bash
    git checkout {branch-name}
    git pull origin {branch-name}
    ```
 
-3. **Fetch task details from Lakar**
-   - Use `mcp__lakar__get_task` to get task info
-   - Use `mcp__lakar__list_task_comments` to find pause notes
-
-4. **Find and display pause notes**
-
-   Look for comments containing "Task Paused" or similar markers:
+4. **Display where you left off**
 
    ---
 
    **Resuming: {task-code}: {title}**
 
    **Where you left off:**
-   {Extract progress and remaining work from pause notes}
+   {Progress and remaining work from the pause notes (Cairn: the pause record's `progress`,
+   `remaining` and `note`)}
 
    **Branch:** `{branch-name}`
 
    ---
 
-5. **Update Lakar status** (if it was changed to Paused/On Hold)
-   - Use `mcp__lakar__update_task` to set status back to `{statuses.in_progress}` (or the notetask equivalent `update_task { code, phase }` per the provider block above)
+5. **Update the task status** (Lakar and Note&Task, if it was changed to Paused/On Hold)
+   - Use `mcp__lakar__update_task` to set status back to `{statuses.in_progress}` (Note&Task:
+     `update_task { code, phase }` per the mapping)
+   - **Cairn:** `resume_task` already cleared the paused flag. Only if the status is no longer
+     `in_progress` or `in_review` (for example someone moved it back to `todo`), set it with
+     `mcp__cairn__update_task { code, status: "in_progress" }`.
 
 6. **Show current state**
 
    - Check for any uncommitted changes: `git status --porcelain`
-   - Show recent commits on this branch:
+   - Show recent commits on this branch against its base branch, where `{base}` is
+     `{git.default_branch}` (**Cairn:** `git.baseBranch` from `get_task_context`, falling back to
+     `{git.default_branch}`):
      ```bash
-     git log main..HEAD --oneline
+     git log origin/{base}..HEAD --oneline
      ```
 
 7. **Provide next steps**
@@ -112,6 +123,8 @@ provider's equivalent:
    - `/zao:test-task` - Test when ready
    - `/zao:submit-task` - Submit for review when complete
 
+   **Cairn:** lead with `suggestedNextCommand` from `get_task_context` when it is present.
+
    ---
 
 ## Error Handling
@@ -122,8 +135,8 @@ provider's equivalent:
   git checkout -b {branch-name} origin/{branch-name}
   ```
 
-- **Branch has conflicts with main**:
-  > "The main branch has changed since you paused. Would you like me to update your branch with the latest changes? (This might require resolving some conflicts)"
+- **Branch has conflicts with its base branch**:
+  > "The `{base}` branch has changed since you paused. Would you like me to update your branch with the latest changes? (This might require resolving some conflicts)"
 
 - **Can't find pause notes**:
   > "I couldn't find pause notes for this task, but here's what I can see from the code changes..."
@@ -134,3 +147,4 @@ provider's equivalent:
 - Always pull latest changes when resuming in case work was done from another machine
 - Make it easy for the user to understand exactly where they left off
 - Provide clear guidance on what to do next
+- Never resume a task that a milestone run owns; resume the run instead

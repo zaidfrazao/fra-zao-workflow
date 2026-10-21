@@ -1,0 +1,17 @@
+name: Check PM mapping copies
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  pm-mapping-identical:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The two pm-mapping.md copies are byte-identical
+        run: cmp plugins/zao/skills/pm-provider/pm-mapping.md plugins/fra/reference/pm-mapping.md

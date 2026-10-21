@@ -1,45 +1,41 @@
 ---
 description: Save your progress and pause the current task to continue later
-allowed-tools: mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, Bash, AskUserQuestion, mcp__notetask__get_task, mcp__notetask__update_task, mcp__notetask__create_comment, mcp__notetask__get_current_user
+allowed-tools: Skill, mcp__lakar__get_task, mcp__lakar__update_task, mcp__lakar__create_comment, mcp__lakar__get_current_user, Bash, AskUserQuestion, mcp__notetask__get_task, mcp__notetask__update_task, mcp__notetask__create_comment, mcp__notetask__get_current_user, mcp__cairn__get_task_context, mcp__cairn__pause_task
 ---
 
 Pause the current task and save progress for later.
 
 ### Project management provider
 
-This command supports two PM backends. Resolve which from `.claude/project.yaml`:
-- If a `project_management:` block exists, use `project_management.provider` (assume `lakar` if
-  that key is absent).
-- Else if a legacy `lakar:` block exists, the provider is `lakar` (statuses from
-  `lakar.statuses.*`, client from `team.lakar_client`).
-- Else default to `lakar`.
+Resolve the PM provider with the `zao:pm-provider` skill (Skill tool) before the first PM call,
+and use its mapping (`pm-mapping.md`) for every PM call below. Steps name the Lakar tool; for
+`notetask` and `cairn` use the mapped equivalent. Where Cairn behaves differently, the step says
+so under **Cairn:**. Lakar and Note&Task behaviour is unchanged.
 
-Status **values** come from config (`project_management.statuses.*`, or legacy
-`lakar.statuses.*`). Wherever a step below names an `mcp__lakar__*` tool, use the resolved
-provider's equivalent:
-
-| Operation | Lakar (`provider: lakar`) | Note&Task (`provider: notetask`) |
-|---|---|---|
-| Fetch task by code | `mcp__lakar__get_task { id: CODE }` | `mcp__notetask__get_task { code: CODE }` |
-| Set task status | `mcp__lakar__update_task { id: CODE, status: <value> }` | `mcp__notetask__update_task { code: CODE, phase: <value> }` |
-| List tasks by status | `mcp__lakar__list_tasks { status: <value> }` | `mcp__notetask__list_tasks { phase: <value> }` |
-| Add comment | `mcp__lakar__create_comment { task_id: CODE, content }` — Lakar also needs `user_id` from `mcp__lakar__get_current_user` | `mcp__notetask__create_comment { code: CODE, content }` — no `user_id` |
-| List comments | `mcp__lakar__list_task_comments { task_id: CODE }` | `mcp__notetask__list_task_comments { code: CODE }` |
+This command is not used inside milestone runs (it has no `--autonomous` mode); a run is paused
+with `/zao:run-milestone --pause`.
 
 ## Relevant MCP Tools
-- **Lakar**: Update task status, add pause notes documenting progress
+- **PM provider** (Lakar, Note&Task or Cairn): record where you left off. Lakar and Note&Task
+  use a pause comment (and an optional status); Cairn stores a structured pause record.
 
 ## Prerequisites Check
 
-1. **Check current branch**
+1. **Find the task for the current branch**
+   - Read `.claude/project.yaml` for `git.default_branch` and `git.branch_prefixes`
    - Run `git branch --show-current`
-   - If on `main` or `develop`:
+   - Find the task with the `zao:pm-provider` skill's branch rule (Lakar and Note&Task: strip a
+     configured `git.branch_prefixes` value and read the task code; **Cairn:**
+     `mcp__cairn__get_task_context { branch: "<current branch>" }`)
+   - If the branch is `{git.default_branch}`, or the lookup finds no task:
      > "You're not on a task branch. There's nothing to pause."
      - Stop execution
 
 2. **Get task context**
-   - Parse Lakar task code from branch name
-   - Use `mcp__lakar__get_task` to fetch task details
+   - Use `mcp__lakar__get_task` to fetch task details (Cairn: the `get_task_context` result above)
+   - **Cairn:** if `activeRun` shows this task `queued` or in flight in a milestone run, stop:
+     > "{CODE} is part of run {activeRun.runId}; pause the run with `/zao:run-milestone --pause`."
+   - **Cairn:** the task must be `in_progress` or `in_review` to pause. Otherwise say so and stop.
 
 ## Pause Process
 
@@ -63,13 +59,16 @@ provider's equivalent:
 4. **Analyze current progress**
 
    Automatically determine what's been done:
-   - Review commits on this branch vs main
+   - Review commits on this branch vs its base branch: `git log origin/{base}..HEAD --oneline`,
+     where `{base}` is `{git.default_branch}` (**Cairn:** `git.baseBranch` from
+     `get_task_context`, falling back to `{git.default_branch}`)
    - Identify files changed
-   - Summarize what's implemented vs what's remaining (based on original task description)
+   - Summarize what's implemented vs what's remaining (based on original task description;
+     **Cairn:** also the plan's step statuses and the acceptance criteria)
 
-5. **Add pause notes to Lakar**
+5. **Record the pause**
 
-   Use `mcp__lakar__create_comment` to document the pause:
+   **Lakar and Note&Task:** use `mcp__lakar__create_comment` to document the pause:
 
    > **Task Paused**
    >
@@ -86,9 +85,15 @@ provider's equivalent:
    > ---
    > *To resume: `/zao:resume-task`*
 
-6. **Update Lakar status** (if there's a "Paused" or "On Hold" status)
+   **Cairn:** store a structured pause record instead of the comment:
+   `mcp__cairn__pause_task { code, progress: [<what's been completed>], remaining: [<what still needs to be done>], note: <user's optional notes>, branch: "{branch-name}" }`.
+   Paused is a flag in Cairn: the status does not change, and `/zao:resume-task` reads this
+   record back.
+
+6. **Update the task status** (Lakar and Note&Task only, if there's a "Paused" or "On Hold" status)
    - Use `mcp__lakar__update_task` to update status if applicable
    - If no paused status exists, leave as "In Progress" (the comment documents the pause)
+   - **Cairn:** skip this step; `pause_task` already set the paused flag.
 
 7. **Report completion**
 
@@ -100,7 +105,7 @@ provider's equivalent:
 
    **What was saved:**
    - All your code changes are committed and backed up
-   - Notes added to Lakar documenting where you left off
+   - Notes added to {provider} documenting where you left off
 
    **To continue later:**
    - Run `/zao:resume-task` to pick up where you left off
@@ -114,7 +119,8 @@ provider's equivalent:
 
 ## Important
 
-- **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_ This applies to Lakar only — Note&Task resolves the author from the API key, so skip get_current_user / user_id when provider is notetask.
+- **Lakar `create_comment` requires `user_id`.** Call `mcp__lakar__get_current_user` once at the start of the command and reuse the returned UUID for every `create_comment` call. _Lakar comments require `user_id`_ This applies to Lakar only — Note&Task and Cairn resolve the author from the API key, so skip get_current_user / user_id when provider is notetask or cairn.
 - Always commit and push before pausing so work isn't lost
 - The pause notes should be detailed enough that anyone (including future you) can understand where things stand
 - Don't switch branches automatically - let the user decide what to do next
+- Never pause a task that a milestone run owns; pause the run instead

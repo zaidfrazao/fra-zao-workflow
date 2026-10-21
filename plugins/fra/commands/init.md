@@ -1,6 +1,6 @@
 ---
 description: Initialize a new project with git, GitHub repo, and Claude Code configuration
-allowed-tools: AskUserQuestion, Bash, Write, Read
+allowed-tools: AskUserQuestion, Bash, Write, Read, Skill, mcp__notetask__list_workspaces, mcp__cairn__list_workspaces, mcp__cairn__list_projects, mcp__cairn__get_current_user
 ---
 
 Initialize a new project with git repository, private GitHub repo, and Claude Code configuration.
@@ -19,6 +19,27 @@ Use `AskUserQuestion` to ask the following (can be combined into one multi-quest
    - Options:
      - **Technical user** - Comfortable with code, git, and technical terminology
      - **Non-technical user** - Prefers simple explanations and guided workflows
+5. "Which project-management app should this project use?"
+   - Options:
+     - **Lakar** (default) - the original backend
+     - **Note&Task** - alternative PM app
+     - **Cairn** - PM app with milestone runs (`/zao:run-milestone`)
+
+Then, depending on the answer:
+
+- **Lakar:** "What is your Lakar client name?" (optional, can be left blank)
+- **Note&Task:** "What project identifier should tasks use? (1–6 uppercase letters/digits, e.g.
+  NOTET)". Resolve the workspace with `mcp__notetask__list_workspaces`: if exactly one, use it
+  silently; if several, ask which; store its name.
+- **Cairn:** resolve the workspace with `mcp__cairn__list_workspaces {}`: if exactly one, use its
+  slug silently; if several, ask which; store its **slug**. Then ask "What project identifier
+  should tasks use? (1–6 capitals/digits starting with a letter, e.g. QAA)" (offer existing
+  projects from `mcp__cairn__list_projects { workspace: <slug> }` if the user wants to reuse
+  one). If the `mcp__cairn__*` tools are not available, say that the `cairn` MCP server is not
+  registered yet (`scripts/setup-mcp.sh` in the fra-zao-workflow repo registers it), ask for the
+  workspace slug directly, and continue.
+
+The provider is always written explicitly into `.claude/project.yaml`.
 
 ### Step 2: Detect Build System
 
@@ -91,14 +112,16 @@ team:
   lead: ""  # Set this to the technical lead's name for review notifications
 
 git:
-  default_branch: main
+  default_branch: main            # the dev branch; tasks (and milestone branches) start here
   branch_prefixes:
     feature: "feature/"
     bugfix: "fix/"
     hotfix: "hotfix/"
     chore: "chore/"
-  merge_strategy: squash
+  merge_strategy: squash          # task PRs
   delete_branch_after_merge: true
+  require_pr_approval: true       # /zao:finish-task waits for an approved review; also resolves
+                                  # milestone_mode.gates.final_merge: auto (a missing key counts as true)
 
 build:
   tool: {build_tool}
@@ -106,16 +129,17 @@ build:
     lint: "{auto-detected or default}"
     typecheck: "{auto-detected or default}"
     build: "{auto-detected or default}"
-    test: "{auto-detected or default}"
+    test: "{auto-detected or default}"   # the "unit" check
+    e2e: ""                             # end-to-end suite; milestone runs require it (unless allow_e2e_fallback)
     dev: "{auto-detected or default}"
   dev_port: 3000
 
 project_management:
-  provider: lakar            # lakar | notetask
+  provider: {provider}       # lakar | notetask | cairn  (always written explicitly)
   client: ""                 # lakar only — your Lakar client name
-  project_identifier: ""     # notetask only — e.g. NOTET
-  workspace: ""              # notetask only
-  statuses:
+  project_identifier: ""     # notetask and cairn — e.g. NOTET, QAA
+  workspace: ""              # notetask: workspace name; cairn: workspace slug, passed as-is
+  statuses:                  # lakar and notetask only — OMIT this block for cairn
     todo: "Todo"
     in_progress: "In Progress"
     in_review: "In Review"
@@ -140,7 +164,37 @@ commits:
 docs:
   brand_template: {full if UI project, minimal otherwise}
   testing_template: full
+  design_reference: ""            # optional URL (e.g. a Figma file)
+
+milestone_mode:                   # /zao:run-milestone (Cairn only); every key optional, defaults shown
+  task_checks: [lint, typecheck, unit]             # quick checks per task (only those with a command)
+  full_suite: [lint, typecheck, unit, build, e2e]  # run once at the end; always includes e2e
+  on_task_failure: pause          # pause | continue_independent
+  max_fix_attempts: 3             # 0-5 fix iterations per task attempt
+  max_verify_fix_rounds: 2        # 0-3 failed full-suite rounds that may be fixed
+  task_pr_ci: none                # none | required_only (task PRs into the milestone branch)
+  allow_e2e_fallback: false       # true: drive TESTING_STRATEGY flows with the Playwright MCP when there is no e2e command
+  trusted_authors: starter        # starter | admins | members: whose task edits a run accepts without a safety gate
+  include_backlog: false          # also queue the milestone's backlog tasks
+  require_acceptance_criteria: true
+  lease_ttl_minutes: 15           # 5-60
+  final_merge_strategy: merge     # merge | squash | rebase (must be allowed by the repo)
+  sync_dev_before_verify: true    # merge new dev-branch commits in before the full suite
+  gates: {run_plan: true, task_plan: false, checkpoint_every: 0, scope_expansion: false, final_merge: auto}
 ```
+
+**Provider-specific values:**
+- `provider: lakar` — keep the Lakar status names shown and fill `client` if given.
+- `provider: notetask` — set `project_identifier` and `workspace`, and use the Note&Task phase
+  values (`todo`, `in_progress`, `in_review`, `done`, `canceled`) under `statuses`.
+- `provider: cairn` — set `workspace` (slug) and `project_identifier`, leave `client` out, and
+  **omit the whole `statuses:` block**, writing `# statuses: omit for cairn (fixed enum;
+  paused/blocked are flags)` in its place.
+
+The `milestone_mode:` block is written for every provider, but only `/zao:run-milestone` with
+`provider: cairn` reads it. Keep only the `task_checks` and `full_suite` names that have a command
+(`unit` maps to `build.commands.test`); `e2e` stays in `full_suite`, so a milestone run needs
+`build.commands.e2e` (fill it in once the E2E suite exists) or `allow_e2e_fallback: true`.
 
 **Build command defaults by tool:**
 - **npm**: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test`, `npm run dev`
@@ -178,7 +232,7 @@ Key project documents are stored in the `docs/` folder:
 Project settings are in `.claude/project.yaml`. This includes:
 - Build commands and tooling
 - Git branch conventions
-- Lakar workflow statuses
+- Project-management provider and statuses
 - Team configuration
 
 ## Slash Commands
@@ -199,7 +253,10 @@ Project settings are in `.claude/project.yaml`. This includes:
 - `/zao:submit-task` - Create PR for review
 - `/zao:finish-task` - Merge and complete task
 - `/zao:check-status` - Check current task status
+- `/zao:run-milestone <milestone>` - Run a whole milestone autonomously (Cairn only)
 ```
+
+(Include the `/zao:run-milestone` line only when the provider is Cairn.)
 
 **For non-technical users:**
 
@@ -240,7 +297,7 @@ Project planning documents are in the `docs/` folder:
 
 ### Working on Tasks (daily workflow)
 - `/zao:workflow` - See an overview of how this works
-- `/zao:begin-task TSK-XXX` - Start a task (get the code from Lakar)
+- `/zao:begin-task TSK-XXX` - Start a task (get the code from your PM app)
 - `/zao:check-status` - See where you are and what to do next
 - `/zao:save` - Save your progress
 
@@ -383,7 +440,7 @@ git push -u origin main
 - `docs/` folder for documentation
 - `.gitignore` for {project type}
 
-**Configuration:** Review `.claude/project.yaml` to customize build commands, team settings, and Lakar statuses.
+**Configuration:** Review `.claude/project.yaml` to customize build commands, team settings, and PM settings (`project_management.*`). If the provider is Cairn, register the `cairn` MCP server with `scripts/setup-mcp.sh` from the fra-zao-workflow repo, and consider limiting the repo's PR CI to `pull_request: branches: [{git.default_branch}, main]` so task PRs into `milestone/**` branches don't run it.
 
 **Next step:** Start defining your product with `/fra:prd`
 
@@ -416,4 +473,5 @@ Just type `/fra:prd` when you're ready to start!
 - The GitHub repo is always created as private for security
 - The user mode setting affects how Claude communicates throughout all commands
 - Build tool detection helps configure the right commands automatically
+- Always write `project_management.provider` explicitly
 - If any step fails, provide clear guidance on how to resolve it
