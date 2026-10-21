@@ -1,6 +1,6 @@
 ---
 description: See your progress through the project setup phases
-allowed-tools: Bash, Read, mcp__lakar__list_projects, mcp__lakar__list_clients, mcp__notetask__list_projects
+allowed-tools: Bash, Read, Skill, mcp__lakar__list_projects, mcp__lakar__list_clients, mcp__notetask__list_projects, mcp__cairn__list_projects, mcp__cairn__list_milestones
 ---
 
 Show the current status of project setup and what needs to be done next.
@@ -14,12 +14,18 @@ Show the current status of project setup and what needs to be done next.
    - `docs/BRAND_GUIDE.md`
    - `docs/TESTING_STRATEGY.md`
 
-2. **Check Lakar project status**
+2. **Check the project-management structure**
 
-   - Determine the provider from `.claude/project.yaml` (`project_management.provider`, default
-     `lakar`).
+   - Resolve the PM provider with the `zao:pm-provider` skill (Skill tool; it ships with the zao
+     plugin) before the first PM call, and use its mapping (`pm-mapping.md`) for every PM call
+     below.
    - **Lakar:** `mcp__lakar__list_clients` + `mcp__lakar__list_projects`.
    - **Note&Task:** `mcp__notetask__list_projects` (match on `project_management.project_identifier`).
+   - **Cairn:** `mcp__cairn__list_projects { workspace: <project_management.workspace> }`, matched
+     on `identifier` = `project_management.project_identifier`. If the project exists, show its
+     milestone progress with `mcp__cairn__list_milestones { projectIdentifier: <identifier> }`:
+     for each milestone its ref, name, state, progress (tasks and points done of planned) and any
+     active milestone run (`activeRun.ref` and state).
 
 3. **Present status report**
 
@@ -34,6 +40,12 @@ Show the current status of project setup and what needs to be done next.
    | Testing Strategy | {Done/Not started/Waiting on PRD + Brand} | `/fra:testing` |
    | PM Structure | {Done/Not started/Waiting on all docs} | `/fra:setup-pm` |
 
+   **Milestones** (Cairn only, when the project exists)
+
+   | Milestone | State | Progress | Active run |
+   |-----------|-------|----------|------------|
+   | {ref} {name} | {state} | {tasksDone}/{tasksTotal} tasks · {pointsDone}/{pointsPlanned} pts | {run ref and state, or —} |
+
    ---
 
 4. **Provide next step recommendation**
@@ -45,6 +57,7 @@ Show the current status of project setup and what needs to be done next.
    - If PRD + brand exist but no testing: "Next, the testing strategy will be generated. Run `/fra:testing`"
    - If all docs exist but no PM structure: "All planning docs are ready! Run `/fra:setup-pm` to create your project-management structure"
    - If everything done: "Project setup is complete! You can update any doc with `/fra:update-prd`, `/fra:update-brand`, or `/fra:update-testing`"
+     (Cairn: also suggest `/zao:run-milestone <next milestone ref> --dry-run` for the first milestone that is not completed, or `/zao:run-milestone --status` if a run is active.)
 
 5. **Show doc summaries (if they exist)**
 

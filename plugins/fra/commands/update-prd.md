@@ -1,6 +1,6 @@
 ---
 description: Update the existing PRD based on new information or feedback
-allowed-tools: AskUserQuestion, mcp__pal__chat, mcp__pal__consensus, mcp__tavily__tavily_search, Read, Write, Edit
+allowed-tools: AskUserQuestion, mcp__pal__chat, mcp__pal__consensus, mcp__tavily__tavily_search, Read, Write, Edit, Skill, mcp__cairn__list_tasks
 ---
 
 Update the existing Product Requirements Document with new information or refinements.
@@ -65,13 +65,21 @@ Before making changes, analyze impact:
 
 - Does this change affect the Brand Guide?
 - Does this change affect the Testing Strategy?
-- Does this change affect existing Lakar tasks?
+- Does this change affect existing tasks in the project-management app?
+
+**Finding affected tasks (Cairn).** Resolve the PM provider with the `zao:pm-provider` skill
+(Skill tool; it ships with the zao plugin) before the first PM call, and use its mapping
+(`pm-mapping.md`) for every PM call below. If the provider is `cairn`, list the tasks linked to
+each changed feature: for every PRD heading anchor the update touches (e.g. `#rule-form`), call
+`mcp__cairn__list_tasks { projectIdentifier: <project_management.project_identifier>, docRef: "docs/PRD.md#<anchor>" }`
+and collect the codes, titles and statuses. For Lakar and Note&Task, which do not link tasks to
+PRD sections, judge the impact from the feature names as before.
 
 Warn the user if updates might cascade:
 > "This change may also require updates to:
 > - Brand Guide: {If visual/UX implications}
 > - Testing Strategy: {If new testing needs}
-> - Lakar tasks: {If scope change affects existing work}
+> - Existing tasks: {If scope change affects existing work; for Cairn, list the affected task codes, titles and statuses found above}
 >
 > After updating the PRD, consider running `/fra:update-brand` or `/fra:update-testing` if needed."
 
