@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "zao",
-  "description": "Task development workflow: begin/implement/test/submit/finish a task (Lakar or Note&Task) on a branch with PR review, plus fix/adjust/pause/resume helpers. Provides the /zao:* commands.",
-  "version": "1.1.0",
+  "description": "Task development workflow: begin/implement/test/submit/finish a task (Lakar, Note&Task or Cairn) on a branch with PR review, plus fix/adjust/pause/resume helpers and autonomous Cairn milestone runs (/zao:run-milestone). Provides the /zao:* commands.",
+  "version": "1.2.0",
   "author": {
     "name": "Zaid Frazao"
   },
@@ -10,8 +10,10 @@
     "workflow",
     "development",
     "lakar",
+    "cairn",
     "git",
     "pull-request",
-    "tasks"
+    "tasks",
+    "milestone"
   ]
 }

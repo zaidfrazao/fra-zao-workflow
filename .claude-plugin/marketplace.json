@@ -9,13 +9,13 @@
     {
       "name": "fra",
       "source": "./plugins/fra",
-      "description": "Project setup commands: scaffold, PRD / brand / testing docs, Lakar project structure (/fra:*).",
+      "description": "Project setup commands: scaffold, PRD / brand / testing docs, project-management structure in Lakar, Note&Task or Cairn (/fra:*).",
       "category": "workflow"
     },
     {
       "name": "zao",
       "source": "./plugins/zao",
-      "description": "Task development workflow: branch + PR lifecycle driven by Lakar tasks (/zao:*).",
+      "description": "Task development workflow: branch + PR lifecycle driven by Lakar, Note&Task or Cairn tasks, plus autonomous Cairn milestone runs (/zao:*).",
       "category": "workflow"
     }
   ]
